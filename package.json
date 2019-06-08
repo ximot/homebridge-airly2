@@ -1,0 +1,30 @@
+{
+  "name": "homebridge-airly2",
+  "version": "0.1.0",
+  "description": "Plugin for Homebridge. Reads air quality from Airly service. (Using new API v2)",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "homebridge-plugin",
+    "homebridge",
+    "plugins",
+    "airquality",
+    "air"
+  ],
+  "engines": {
+    "node": ">=0.12.0",
+    "homebridge": ">=0.2.0"
+  },
+  "author": "Tomasz Wyderka",
+  "license": "GNU",
+  "dependencies": {
+    "@types/node": "^12.0.7",
+    "request": "^2.88.0"
+  },
+  "devDependencies": {
+    "request": "^2.88.0",
+    "require": "^2.4.20"
+  }
+}
