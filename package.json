@@ -11,8 +11,13 @@
     "homebridge",
     "plugins",
     "airquality",
-    "air"
+    "air",
+    "airly"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ximot/homebridge-airly2"
+  },
   "engines": {
     "node": ">=0.12.0",
     "homebridge": ">=0.2.0"
@@ -23,9 +28,8 @@
     "@types/node": "^12.0.7",
     "request": "^2.88.0"
   },
-  "devDependencies": {
-    "request": "^2.88.0",
-    "require": "^2.4.20",
-    "uglify-js": "^3.6.0"
-  }
+  "bugs": {
+    "url": "https://github.com/ximot/homebridge-airly2/issues"
+  },
+  "homepage": "https://github.com/ximot/homebridge-airly2#readme"
 }
