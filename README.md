@@ -2,6 +2,10 @@
 
 **Homebridge plugin retrieving information about air quality from the Airly website using API version 2**
 
+[![NPM Version](https://img.shields.io/npm/v/homebridge-airly2.svg)](https://www.npmjs.com/package/homebridge-airly2)
+
+
+
 Project is based on [homebridge-airly](https://github.com/beniaminrychter/homebridge-airly).
 
 ## Instalation
