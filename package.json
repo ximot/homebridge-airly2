@@ -16,7 +16,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ximot/homebridge-airly2"
+    "url": "git+https://github.com/ximot/homebridge-airly2.git"
   },
   "engines": {
     "node": ">=16.0.0",
