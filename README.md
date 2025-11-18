@@ -12,11 +12,17 @@
 Project is based on [homebridge-airly](https://github.com/beniaminrychter/homebridge-airly).
 
 ## Instalation
+### Standalone
 1. Install Homebridge using: `(sudo) npm install -g --unsafe-perm homebridge`.
-1. Install this plugin using: `(sudo) npm install -g homebridge-airly2`.
-1. Get **API Key** from Airly. Login here <https://developer.airly.eu/login> and generate it.
-1. Find out your coordinates (latitude and longitude). Based on that information Airly will show measurements from nearest sensor. You can use this page <https://www.latlong.net/>.
-1. Update your configuration file like the example below.
+2. Install this plugin using: `(sudo) npm install -g homebridge-airly2`.
+
+### Using hb-service
+2. Install this plugin using: `hb-service add homebridge-airly2`
+
+### Get access API key
+3. Get **API Key** from Airly. Login here <https://developer.airly.eu/login> and generate it.
+4. Find out your coordinates (latitude and longitude). Based on that information Airly will show measurements from nearest sensor. You can use this page <https://www.latlong.net/>.
+5. Update your configuration file like the example below.
 
 ### Configuration
 Set in config.json file
