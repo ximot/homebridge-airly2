@@ -6,7 +6,7 @@
 
 ## Requirements
 - Homebridge v1.0 or newer
-- Node.js 16 or newer
+- Node.js 20 or newer
 
 
 Project is based on [homebridge-airly](https://github.com/beniaminrychter/homebridge-airly).
@@ -24,6 +24,9 @@ Project is based on [homebridge-airly](https://github.com/beniaminrychter/homebr
 4. Find out your coordinates (latitude and longitude). Based on that information Airly will show measurements from nearest sensor. You can use this page <https://www.latlong.net/>.
 5. Update your configuration file like the example below.
 
+###
+6. Add the configuration through the plugin settings or create the configuration section manually.
+
 ### Configuration
 Set in config.json file
 
@@ -31,7 +34,7 @@ Set in config.json file
 "accessories": [
     {
           "accessory": "Air2",
-          "key": "YOUR_API_KEY",
+          "apikey": "YOUR_API_KEY",
           "latitude": "YOUR_LATITUDE",
           "longitude": "YOUR_LONGITUDE",
           "maxdistance": 3,
