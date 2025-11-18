@@ -4,6 +4,9 @@
 
 [![NPM Version](https://img.shields.io/npm/v/homebridge-airly2.svg)](https://www.npmjs.com/package/homebridge-airly2)
 
+## Requirements
+- Homebridge v1.0 or newer
+- Node.js 16 or newer
 
 
 Project is based on [homebridge-airly](https://github.com/beniaminrychter/homebridge-airly).
