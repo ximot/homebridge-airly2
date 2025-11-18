@@ -1,0 +1,48 @@
+{
+  "pluginAlias": "Air2",
+  "pluginType": "accessory",
+  "singular": false,
+  "schema": {
+    "type": "object",
+    "properties": {
+      "accessory": {
+        "title": "Accessory Identifier",
+        "type": "string",
+        "const": "Air2",
+        "default": "Air2",
+        "description": "This must stay as Air2."
+      },
+      "name": {
+        "title": "Accessory Name",
+        "type": "string",
+        "default": "Airly Air Quality"
+      },
+      "apikey": {
+        "title": "API Key",
+        "type": "string",
+        "description": "Preferred API key field."
+      },
+      "latitude": {
+        "title": "Latitude",
+        "type": "string",
+        "required": true
+      },
+      "longitude": {
+        "title": "Longitude",
+        "type": "string",
+        "required": true
+      },
+      "maxdistance": {
+        "title": "Max Distance (km)",
+        "type": "number",
+        "default": 3
+      }
+    },
+    "required": [
+      "accessory",
+      "apikey",
+      "latitude",
+      "longitude"
+    ]
+  }
+}
