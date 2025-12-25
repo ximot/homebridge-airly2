@@ -36,6 +36,13 @@
         "title": "Max Distance (km)",
         "type": "number",
         "default": 3
+      },
+      "refreshinterval": {
+        "title": "Refresh Interval (minutes)",
+        "type": "number",
+        "default": 15,
+        "minimum": 15,
+        "description": "How often to fetch data. Minimum 15 minutes (≈100 calls/day API quota)."
       }
     },
     "required": [
