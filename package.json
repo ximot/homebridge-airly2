@@ -1,6 +1,6 @@
 {
   "name": "homebridge-airly2",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "description": "Plugin for Homebridge. Reads air quality from Airly service. (Using new API v2)",
   "main": "index.js",
   "scripts": {
@@ -20,10 +20,10 @@
   },
   "engines": {
     "node": ">=20.7.0",
-    "homebridge": ">=1.0.0"
+    "homebridge": "^1.6.0 || ^2.0.0-beta.0"
   },
   "author": "Tomasz Wyderka",
-  "license": "GNU",
+  "license": "GPL-3.0",
   "dependencies": {},
   "bugs": {
     "url": "https://github.com/ximot/homebridge-airly2/issues"

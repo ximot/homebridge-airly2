@@ -2,7 +2,9 @@ const https = require('https');
 
 const PLUGIN_NAME = 'homebridge-airly2';
 const ACCESSORY_NAME = 'Air2';
-const REFRESH_INTERVAL_SECONDS = 600;
+const API_REQUESTS_PER_DAY = 100;
+const SECONDS_PER_DAY = 24 * 60 * 60;
+const MIN_REFRESH_INTERVAL_SECONDS = Math.ceil(SECONDS_PER_DAY / API_REQUESTS_PER_DAY);
 
 let Service;
 let Characteristic;
@@ -26,39 +28,94 @@ function AirAccessory(log, config, api) {
     this.log = log;
     this.name = config.name || ACCESSORY_NAME;
     this.apikey = config.key || config.apikey;
-    this.latitude = config.latitude;
-    this.longitude = config.longitude;
-    this.maxDistance = parseFloat(config.maxdistance);
 
     if (!this.apikey) {
         throw new Error('Configuration of apikey is missing. Check configuration file.');
     }
-    if (!this.latitude) {
-        throw new Error('Configuration of latitude is missing! Check configuration file.');
-    }
-    if (!this.longitude) {
-        throw new Error('Configuration of longitude is missing! Check configuration file.');
-    }
-    if (Number.isNaN(this.maxDistance)) {
-        this.maxDistance = 3;
-    }
+
+    // Validate coordinates
+    const coords = this.validateCoordinates(config.latitude, config.longitude);
+    this.latitude = coords.latitude;
+    this.longitude = coords.longitude;
+
+    // Validate maxDistance
+    this.maxDistance = this.validateMaxDistance(config.maxdistance);
+
+    // Generate unique serial number based on location
+    this.serialNumber = this.generateSerialNumber();
+
+    const defaultRefreshMinutes = Math.ceil(MIN_REFRESH_INTERVAL_SECONDS / 60);
+    const configuredRefreshMinutes = parseFloat(config.refreshinterval);
+    const refreshMinutes = Number.isNaN(configuredRefreshMinutes)
+        ? defaultRefreshMinutes
+        : configuredRefreshMinutes;
+    this.refreshIntervalSeconds = Math.max(
+        MIN_REFRESH_INTERVAL_SECONDS,
+        Math.round(refreshMinutes * 60)
+    );
+    this.refreshTimer = undefined;
+    this.refreshPromise = null;
 
     this.lastupdate = 0;
     this.cache = undefined;
     this.airService = undefined;
     this.log.info('Airly API v2 accessory initialized');
+    this.log.info(
+        `Polling Airly every ${Math.round(
+            this.refreshIntervalSeconds / 60
+        )} minutes (API limit: ${Math.ceil(MIN_REFRESH_INTERVAL_SECONDS / 60)} minutes)`
+    );
+
+    this.startPolling();
 }
 
 AirAccessory.prototype = {
     getAirData: async function () {
-        const url = `https://airapi.airly.eu/v2/measurements/nearest?indexType=AIRLY_CAQI&lat=${this.latitude}&lng=${this.longitude}&maxDistanceKM=${this.maxDistance}`;
+        if (!this.cache) {
+            this.refreshMeasurement().catch(() => {});
+            if (this.airService) {
+                this.airService.setCharacteristic(Characteristic.StatusFault, 1);
+            }
+            return 0;
+        }
 
-        const shouldRefresh =
-            this.lastupdate === 0 ||
-            this.cache === undefined ||
-            this.lastupdate + REFRESH_INTERVAL_SECONDS < Date.now() / 1000;
+        return this.transformAQI(this.getIndexValue(this.cache));
+    },
 
-        if (shouldRefresh) {
+    startPolling: function () {
+        if (this.refreshTimer) {
+            clearInterval(this.refreshTimer);
+        }
+
+        const handleError = (err) => {
+            this.log.debug('Polling refresh failed: ' + (err?.message || 'Unknown error'));
+        };
+
+        this.refreshMeasurement().catch(handleError);
+        this.refreshTimer = setInterval(() => {
+            this.refreshMeasurement().catch(handleError);
+        }, this.refreshIntervalSeconds * 1000);
+
+        if (this.api && typeof this.api.on === 'function') {
+            this.api.on('shutdown', () => this.stopPolling());
+        }
+    },
+
+    stopPolling: function () {
+        if (this.refreshTimer) {
+            clearInterval(this.refreshTimer);
+            this.refreshTimer = undefined;
+        }
+    },
+
+    refreshMeasurement: async function () {
+        if (this.refreshPromise) {
+            return this.refreshPromise;
+        }
+
+        const url = this.buildApiUrl();
+
+        this.refreshPromise = (async () => {
             try {
                 const data = await httpGetJson(url, {
                     apikey: this.apikey,
@@ -66,8 +123,7 @@ AirAccessory.prototype = {
                 });
                 const normalized = this.normalizeMeasurement(data);
                 this.log.info(`Parsed Airly measurement AIRLY_CAQI=${this.getIndexValue(normalized)}`);
-                const aqi = this.updateData(normalized, 'Fetch');
-                return this.transformAQI(aqi);
+                this.updateData(normalized, 'Fetch');
             } catch (err) {
                 if (this.airService) {
                     this.airService.setCharacteristic(Characteristic.StatusFault, 1);
@@ -77,12 +133,12 @@ AirAccessory.prototype = {
                     throw new HapStatusError(HAPStatus.SERVICE_COMMUNICATION_FAILURE);
                 }
                 throw err;
+            } finally {
+                this.refreshPromise = null;
             }
-        }
+        })();
 
-        this.log.info('Using cached Airly data');
-        const aqi = this.updateData(this.cache, 'Cache');
-        return this.transformAQI(aqi);
+        return this.refreshPromise;
     },
 
     updateData: function (data, type) {
@@ -139,7 +195,7 @@ AirAccessory.prototype = {
         informationService
             .setCharacteristic(Characteristic.Manufacturer, 'Airly')
             .setCharacteristic(Characteristic.Model, 'API v2')
-            .setCharacteristic(Characteristic.SerialNumber, '123-456');
+            .setCharacteristic(Characteristic.SerialNumber, this.serialNumber);
         services.push(informationService);
 
         this.airService = new Service.AirQualitySensor(this.name);
@@ -205,7 +261,64 @@ AirAccessory.prototype = {
         }
         return data;
     },
+
+    validateCoordinates: function (lat, lng) {
+        if (lat === undefined || lat === null || lat === '') {
+            throw new Error('Configuration of latitude is missing! Check configuration file.');
+        }
+        if (lng === undefined || lng === null || lng === '') {
+            throw new Error('Configuration of longitude is missing! Check configuration file.');
+        }
+
+        const latitude = parseFloat(lat);
+        const longitude = parseFloat(lng);
+
+        if (Number.isNaN(latitude) || latitude < -90 || latitude > 90) {
+            throw new Error(`Invalid latitude: ${lat}. Must be a number between -90 and 90.`);
+        }
+        if (Number.isNaN(longitude) || longitude < -180 || longitude > 180) {
+            throw new Error(`Invalid longitude: ${lng}. Must be a number between -180 and 180.`);
+        }
+
+        return { latitude, longitude };
+    },
+
+    validateMaxDistance: function (maxDistance) {
+        const parsed = parseFloat(maxDistance);
+        if (Number.isNaN(parsed) || parsed <= 0) {
+            return 3;
+        }
+        if (parsed > 50) {
+            this.log.warn('maxDistance capped at 50km (was ' + parsed + ')');
+            return 50;
+        }
+        return parsed;
+    },
+
+    generateSerialNumber: function () {
+        const locationKey = `${this.latitude}_${this.longitude}`;
+        let hash = 0;
+        for (let i = 0; i < locationKey.length; i++) {
+            const char = locationKey.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash;
+        }
+        return `AIR2-${Math.abs(hash).toString(16).toUpperCase().padStart(8, '0')}`;
+    },
+
+    buildApiUrl: function () {
+        const baseUrl = 'https://airapi.airly.eu/v2/measurements/nearest';
+        const params = new URLSearchParams({
+            indexType: 'AIRLY_CAQI',
+            lat: String(this.latitude),
+            lng: String(this.longitude),
+            maxDistanceKM: String(this.maxDistance),
+        });
+        return `${baseUrl}?${params.toString()}`;
+    },
 };
+
+const HTTP_TIMEOUT_MS = 30000;
 
 function httpGetJson(url, headers) {
     return new Promise((resolve, reject) => {
@@ -238,6 +351,10 @@ function httpGetJson(url, headers) {
                 });
             }
         );
+        request.setTimeout(HTTP_TIMEOUT_MS, () => {
+            request.destroy();
+            reject(new Error('Request timeout after ' + (HTTP_TIMEOUT_MS / 1000) + ' seconds'));
+        });
         request.on('error', reject);
         request.end();
     });
