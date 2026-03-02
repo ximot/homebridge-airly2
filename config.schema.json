@@ -43,6 +43,20 @@
         "default": 15,
         "minimum": 15,
         "description": "How often to fetch data. Minimum 15 minutes (≈100 calls/day API quota)."
+      },
+      "indextype": {
+        "title": "Index Type",
+        "type": "string",
+        "default": "AIRLY_CAQI",
+        "description": "Airly air quality index type. Default: AIRLY_CAQI.",
+        "oneOf": [
+          { "title": "AIRLY_CAQI (default)", "enum": ["AIRLY_CAQI"] },
+          { "title": "AIRLY_AQI (WHO-based)", "enum": ["AIRLY_AQI"] },
+          { "title": "US_AQI", "enum": ["US_AQI"] },
+          { "title": "CAQI", "enum": ["CAQI"] },
+          { "title": "DAQI", "enum": ["DAQI"] },
+          { "title": "PIJP (Poland)", "enum": ["PIJP"] }
+        ]
       }
     },
     "required": [

@@ -17,6 +17,8 @@ const createMockHomebridgeApi = () => {
         Manufacturer: 'Manufacturer',
         Model: 'Model',
         SerialNumber: 'SerialNumber',
+        NitrogenDioxideDensity: 'NitrogenDioxideDensity',
+        OzoneDensity: 'OzoneDensity',
     };
 
     const mockService = {
@@ -72,6 +74,7 @@ const createMockThis = (overrides = {}) => ({
     latitude: 52.2297,
     longitude: 21.0122,
     maxDistance: 5,
+    indexType: 'AIRLY_CAQI',
     apikey: 'test-api-key',
     log: createMockLog(),
     airService: {
@@ -357,6 +360,17 @@ describe('homebridge-airly2', () => {
             expect(url).toContain('lat=52.2297');
             expect(url).toContain('lng=21.0122');
         });
+
+        it('should use configured indexType in URL', () => {
+            const mockThis = createMockThis({
+                latitude: 52.2297,
+                longitude: 21.0122,
+                maxDistance: 5,
+                indexType: 'AIRLY_AQI',
+            });
+            const url = AirAccessory.prototype.buildApiUrl.call(mockThis);
+            expect(url).toContain('indexType=AIRLY_AQI');
+        });
     });
 
     describe('AirAccessory constructor', () => {
@@ -420,6 +434,24 @@ describe('homebridge-airly2', () => {
             mockConfig.key = 'alt-api-key';
             const accessory = new AirAccessory(mockLog, mockConfig, mockHbApi);
             expect(accessory.apikey).toBe('alt-api-key');
+        });
+
+        it('should default indexType to AIRLY_CAQI when not provided', () => {
+            const accessory = new AirAccessory(mockLog, mockConfig, mockHbApi);
+            expect(accessory.indexType).toBe('AIRLY_CAQI');
+        });
+
+        it('should use provided indexType from config', () => {
+            mockConfig.indextype = 'AIRLY_AQI';
+            const accessory = new AirAccessory(mockLog, mockConfig, mockHbApi);
+            expect(accessory.indexType).toBe('AIRLY_AQI');
+        });
+
+        it('should fallback to AIRLY_CAQI for invalid indexType', () => {
+            mockConfig.indextype = 'INVALID_INDEX';
+            const accessory = new AirAccessory(mockLog, mockConfig, mockHbApi);
+            expect(accessory.indexType).toBe('AIRLY_CAQI');
+            expect(mockLog.warn).toHaveBeenCalledWith(expect.stringContaining('Unknown indexType'));
         });
     });
 
@@ -670,6 +702,71 @@ describe('homebridge-airly2', () => {
             AirAccessory.prototype.updateData.call(mockThis, data, 'Fetch');
 
             expect(mockThis.normalizeMeasurement).not.toHaveBeenCalled();
+        });
+
+        it('should set NitrogenDioxideDensity when NO2 data available', () => {
+            const mockThis = createMockThis();
+            mockThis.normalizeMeasurement = AirAccessory.prototype.normalizeMeasurement;
+            mockThis.getSensorValue = AirAccessory.prototype.getSensorValue;
+            mockThis.getIndexValue = AirAccessory.prototype.getIndexValue;
+
+            const data = {
+                current: {
+                    values: [
+                        { name: 'PM25', value: 25 },
+                        { name: 'NO2', value: 15.5 },
+                    ],
+                    indexes: [{ value: 60 }],
+                },
+            };
+
+            AirAccessory.prototype.updateData.call(mockThis, data, 'Fetch');
+            expect(mockThis.airService.setCharacteristic).toHaveBeenCalledWith(
+                'NitrogenDioxideDensity', 15.5
+            );
+        });
+
+        it('should set OzoneDensity when O3 data available', () => {
+            const mockThis = createMockThis();
+            mockThis.normalizeMeasurement = AirAccessory.prototype.normalizeMeasurement;
+            mockThis.getSensorValue = AirAccessory.prototype.getSensorValue;
+            mockThis.getIndexValue = AirAccessory.prototype.getIndexValue;
+
+            const data = {
+                current: {
+                    values: [
+                        { name: 'O3', value: 80.2 },
+                    ],
+                    indexes: [{ value: 60 }],
+                },
+            };
+
+            AirAccessory.prototype.updateData.call(mockThis, data, 'Fetch');
+            expect(mockThis.airService.setCharacteristic).toHaveBeenCalledWith(
+                'OzoneDensity', 80.2
+            );
+        });
+
+        it('should not set NitrogenDioxideDensity when NO2 data is absent', () => {
+            const mockThis = createMockThis();
+            mockThis.normalizeMeasurement = AirAccessory.prototype.normalizeMeasurement;
+            mockThis.getSensorValue = AirAccessory.prototype.getSensorValue;
+            mockThis.getIndexValue = AirAccessory.prototype.getIndexValue;
+
+            const data = {
+                current: {
+                    values: [{ name: 'PM25', value: 25 }],
+                    indexes: [{ value: 60 }],
+                },
+            };
+
+            AirAccessory.prototype.updateData.call(mockThis, data, 'Fetch');
+            expect(mockThis.airService.setCharacteristic).not.toHaveBeenCalledWith(
+                'NitrogenDioxideDensity', expect.anything()
+            );
+            expect(mockThis.airService.setCharacteristic).not.toHaveBeenCalledWith(
+                'OzoneDensity', expect.anything()
+            );
         });
     });
 });
