@@ -659,5 +659,17 @@ describe('homebridge-airly2', () => {
             AirAccessory.prototype.updateData.call(mockThis, data, 'Cache');
             expect(mockThis.lastupdate).toBe(0);
         });
+
+        it('should not call normalizeMeasurement internally (data is pre-normalized)', () => {
+            const mockThis = createMockThis();
+            mockThis.normalizeMeasurement = jest.fn();
+            mockThis.getSensorValue = AirAccessory.prototype.getSensorValue;
+            mockThis.getIndexValue = AirAccessory.prototype.getIndexValue;
+
+            const data = { current: { values: [], indexes: [{ value: 50 }] } };
+            AirAccessory.prototype.updateData.call(mockThis, data, 'Fetch');
+
+            expect(mockThis.normalizeMeasurement).not.toHaveBeenCalled();
+        });
     });
 });
