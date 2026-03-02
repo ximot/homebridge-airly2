@@ -12,7 +12,6 @@ let HapStatusError;
 let HAPStatus;
 
 module.exports = (api) => {
-    console.log('homebridge API version: ' + api.version);
     Service = api.hap.Service;
     Characteristic = api.hap.Characteristic;
     HapStatusError = api.hap.HapStatusError;
@@ -142,7 +141,7 @@ AirAccessory.prototype = {
     },
 
     updateData: function (data, type) {
-        const measurement = this.normalizeMeasurement(data);
+        const measurement = data;
         if (!measurement || !measurement.current) {
             this.log.warn('Airly response does not contain current measurement data');
             return 0;
