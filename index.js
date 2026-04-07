@@ -5,6 +5,10 @@ const ACCESSORY_NAME = 'Air2';
 const API_REQUESTS_PER_DAY = 100;
 const SECONDS_PER_DAY = 24 * 60 * 60;
 const MIN_REFRESH_INTERVAL_SECONDS = Math.ceil(SECONDS_PER_DAY / API_REQUESTS_PER_DAY);
+const VALID_INDEX_TYPES = [
+    'AIRLY_CAQI', 'AIRLY_AQI', 'CAQI', 'DAQI', 'PIJP',
+    'US_AQI', 'AIRLY_DAQI', 'AIRLY_PIJP', 'AIRLY_US_AQI', 'MONGOLIAN_AQI',
+];
 
 let Service;
 let Characteristic;
@@ -12,7 +16,6 @@ let HapStatusError;
 let HAPStatus;
 
 module.exports = (api) => {
-    console.log('homebridge API version: ' + api.version);
     Service = api.hap.Service;
     Characteristic = api.hap.Characteristic;
     HapStatusError = api.hap.HapStatusError;
@@ -40,6 +43,14 @@ function AirAccessory(log, config, api) {
 
     // Validate maxDistance
     this.maxDistance = this.validateMaxDistance(config.maxdistance);
+
+    const requestedIndex = config.indextype || config.indexType || 'AIRLY_CAQI';
+    if (!VALID_INDEX_TYPES.includes(requestedIndex)) {
+        this.log.warn(`Unknown indexType "${requestedIndex}", falling back to AIRLY_CAQI`);
+        this.indexType = 'AIRLY_CAQI';
+    } else {
+        this.indexType = requestedIndex;
+    }
 
     // Generate unique serial number based on location
     this.serialNumber = this.generateSerialNumber();
@@ -122,7 +133,7 @@ AirAccessory.prototype = {
                     Accept: 'application/json',
                 });
                 const normalized = this.normalizeMeasurement(data);
-                this.log.info(`Parsed Airly measurement AIRLY_CAQI=${this.getIndexValue(normalized)}`);
+                this.log.info(`Parsed Airly measurement ${this.indexType}=${this.getIndexValue(normalized)}`);
                 this.updateData(normalized, 'Fetch');
             } catch (err) {
                 if (this.airService) {
@@ -142,7 +153,7 @@ AirAccessory.prototype = {
     },
 
     updateData: function (data, type) {
-        const measurement = this.normalizeMeasurement(data);
+        const measurement = data;
         if (!measurement || !measurement.current) {
             this.log.warn('Airly response does not contain current measurement data');
             return 0;
@@ -160,6 +171,16 @@ AirAccessory.prototype = {
             }
             if (pm10 !== null) {
                 this.airService.setCharacteristic(Characteristic.PM10Density, pm10);
+            }
+        }
+        const no2 = this.getSensorValue(measurement, 'NO2');
+        const o3 = this.getSensorValue(measurement, 'O3');
+        if (this.airService) {
+            if (no2 !== null) {
+                this.airService.setCharacteristic(Characteristic.NitrogenDioxideDensity, no2);
+            }
+            if (o3 !== null) {
+                this.airService.setCharacteristic(Characteristic.OzoneDensity, o3);
             }
         }
         const aqi = this.getIndexValue(measurement);
@@ -214,6 +235,8 @@ AirAccessory.prototype = {
         this.airService.addCharacteristic(Characteristic.StatusFault);
         this.airService.addCharacteristic(Characteristic.PM2_5Density);
         this.airService.addCharacteristic(Characteristic.PM10Density);
+        this.airService.addCharacteristic(Characteristic.NitrogenDioxideDensity);
+        this.airService.addCharacteristic(Characteristic.OzoneDensity);
         services.push(this.airService);
 
         return services;
@@ -309,7 +332,7 @@ AirAccessory.prototype = {
     buildApiUrl: function () {
         const baseUrl = 'https://airapi.airly.eu/v2/measurements/nearest';
         const params = new URLSearchParams({
-            indexType: 'AIRLY_CAQI',
+            indexType: this.indexType,
             lat: String(this.latitude),
             lng: String(this.longitude),
             maxDistanceKM: String(this.maxDistance),
