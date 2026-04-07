@@ -39,6 +39,7 @@ Set in config.json file
           "longitude": "YOUR_LONGITUDE",
           "maxdistance": 3,
           "refreshinterval": 15,
+          "indextype": "AIRLY_CAQI",
           "name": "Airly Air Quality"
     }
 ```
@@ -51,6 +52,13 @@ Fields:
 - `longitude` String with your longitude e.g. `"18.94962214"` (required).
 - `maxdistance` The maximum distance (in km) from which the measurement will be read. Default: 3 km, max: 50 km. (optional)
 - `refreshinterval` Polling frequency in minutes. Minimum/default is 15 minutes to stay within the 100 requests/day Airly quota. (optional)
+- `indextype` Air quality index type used when fetching data from Airly. Available values: `AIRLY_CAQI` (default), `AIRLY_AQI` (WHO-based), `US_AQI`, `CAQI`, `DAQI`, `PIJP`. (optional)
+
+### Additional sensors
+
+The plugin automatically exposes the following characteristics when available from the Airly API:
+- **NO₂** (Nitrogen Dioxide Density) — in µg/m³
+- **O₃** (Ozone Density) — in µg/m³
 
 ## Development
 
